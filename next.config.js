@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['jsonwebtoken', 'bcryptjs'],
   webpack: (config, { isServer }) => {
     // Fix for webpack issues
     config.resolve.fallback = {
