@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  // Check if the request is for admin routes
+  // Skip middleware for login page to prevent redirect loops
+  if (request.nextUrl.pathname === '/admin/login') {
+    return NextResponse.next()
+  }
+
+  // Check if the request is for admin routes (except login)
   if (request.nextUrl.pathname.startsWith('/admin')) {
     const token = request.cookies.get('admin-token')?.value
 
-    if (!token) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
-    }
-
-    // For production, we'll do a simpler token check
-    // The actual JWT verification happens in the API routes
-    if (token.length < 10) {
+    if (!token || token.length < 10) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
@@ -20,5 +19,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*']
+  matcher: [
+    '/admin/((?!login|api).*)' // Match /admin/* but exclude /admin/login and /admin/api/*
+  ]
 }

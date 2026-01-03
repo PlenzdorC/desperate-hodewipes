@@ -17,7 +17,7 @@ export default function AdminLogin() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/simple-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,7 +28,8 @@ export default function AdminLogin() {
       const data = await response.json()
 
       if (response.ok) {
-        router.push('/admin')
+        // Force a page reload to ensure cookies are properly set
+        window.location.href = '/admin'
       } else {
         setError(data.error || 'Login failed')
       }

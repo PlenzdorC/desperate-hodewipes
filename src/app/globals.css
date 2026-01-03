@@ -27,3 +27,44 @@ body {
   opacity: 1 !important;
   transform: translateY(0) !important;
 }
+
+/* Prevent layout shift during loading */
+.admin-layout {
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+.admin-sidebar {
+  width: 256px; /* 16rem = w-64 */
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Prevent sidebar movement on mobile */
+@media (min-width: 1024px) {
+  .admin-sidebar {
+    transform: none !important;
+  }
+}
+
+/* Loading skeleton animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

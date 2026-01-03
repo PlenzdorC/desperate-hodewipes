@@ -1,17 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { 
   Users, 
   FileText, 
   Calendar, 
-  TrendingUp, 
-  LogOut,
-  Settings,
+  TrendingUp,
   Activity
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import AdminLayout from '@/components/admin/AdminLayout'
 
 interface DashboardStats {
   totalMembers: number
@@ -37,7 +35,6 @@ export default function AdminDashboard() {
   })
   const [recentActivity, setRecentActivity] = useState<ActivityLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
     loadDashboardData()
@@ -61,7 +58,7 @@ export default function AdminDashboard() {
       ])
 
       // Calculate stats
-      const totalMembers = members.members?.length || 0
+      const totalMembers = members.members?.filter((m: any) => m.status === 'active').length || 0
       const pendingApplications = applications.applications?.filter((app: any) => app.status === 'pending').length || 0
       const upcomingEvents = events.events?.length || 0
       
@@ -98,49 +95,21 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/admin/login')
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading dashboard...</p>
+      <AdminLayout currentPage="dashboard">
+        <div className="p-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+            <p className="text-gray-300">Loading dashboard...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <header className="bg-gray-800 shadow-sm border-b border-gray-700">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white">
-              Admin Dashboard
-            </h1>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <AdminLayout currentPage="dashboard">
       <div className="p-6">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -198,22 +167,30 @@ export default function AdminDashboard() {
           <div className="bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-700">
             <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700">
-                <Users className="w-6 h-6 mb-2" />
-                <span className="text-sm">Manage Members</span>
-              </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700">
-                <FileText className="w-6 h-6 mb-2" />
-                <span className="text-sm">Review Applications</span>
-              </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700">
-                <Calendar className="w-6 h-6 mb-2" />
-                <span className="text-sm">Manage Events</span>
-              </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700">
-                <TrendingUp className="w-6 h-6 mb-2" />
-                <span className="text-sm">Update Progress</span>
-              </Button>
+              <a href="/admin/members">
+                <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700 w-full">
+                  <Users className="w-6 h-6 mb-2" />
+                  <span className="text-sm">Manage Members</span>
+                </Button>
+              </a>
+              <a href="/admin/applications">
+                <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700 w-full">
+                  <FileText className="w-6 h-6 mb-2" />
+                  <span className="text-sm">Review Applications</span>
+                </Button>
+              </a>
+              <a href="/admin/events">
+                <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700 w-full">
+                  <Calendar className="w-6 h-6 mb-2" />
+                  <span className="text-sm">Manage Events</span>
+                </Button>
+              </a>
+              <a href="/admin/raids">
+                <Button variant="outline" className="h-auto p-4 flex flex-col items-center border-gray-600 text-gray-300 hover:bg-gray-700 w-full">
+                  <TrendingUp className="w-6 h-6 mb-2" />
+                  <span className="text-sm">Update Progress</span>
+                </Button>
+              </a>
             </div>
           </div>
 
@@ -242,6 +219,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }

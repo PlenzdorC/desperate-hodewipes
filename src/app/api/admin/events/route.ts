@@ -6,20 +6,20 @@ export const runtime = 'nodejs'
 export async function GET() {
   try {
     const { data, error } = await supabase
-      .from('members')
+      .from('events')
       .select('*')
-      .order('is_officer', { ascending: false })
-      .order('name', { ascending: true })
+      .order('event_date', { ascending: true })
+      .order('event_time', { ascending: true })
 
     if (error) {
       console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch members' },
+        { error: 'Failed to fetch events' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ members: data })
+    return NextResponse.json({ events: data })
 
   } catch (error) {
     console.error('API error:', error)
@@ -35,18 +35,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     const {
-      name,
-      class: memberClass,
-      specialization,
-      role,
-      item_level,
-      raiderio_score,
-      status,
-      is_officer
+      title,
+      description,
+      event_type,
+      event_date,
+      event_time,
+      max_attendees,
+      status
     } = body
 
     // Validate required fields
-    if (!name || !memberClass || !specialization || !role) {
+    if (!title || !event_type || !event_date || !event_time) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -54,29 +53,38 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('members')
+      .from('events')
       .insert({
-        name,
-        class: memberClass,
-        specialization,
-        role,
-        item_level: item_level || null,
-        raiderio_score: raiderio_score || null,
-        status: status || 'active',
-        is_officer: is_officer || false
+        title,
+        description: description || null,
+        event_type,
+        event_date,
+        event_time,
+        max_attendees: max_attendees || null,
+        current_attendees: 0,
+        status: status || 'scheduled'
       })
       .select()
 
     if (error) {
       console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: 'Failed to create member' },
+        { error: 'Failed to create event' },
         { status: 500 }
       )
     }
 
+    // Log activity
+    await supabase
+      .from('activity_log')
+      .insert({
+        action: 'event_created',
+        description: `New event created: ${title}`,
+        user: 'admin'
+      })
+
     return NextResponse.json(
-      { message: 'Member created successfully', data },
+      { message: 'Event created successfully', data },
       { status: 201 }
     )
 
@@ -95,34 +103,32 @@ export async function PUT(request: NextRequest) {
     
     const {
       id,
-      name,
-      class: memberClass,
-      specialization,
-      role,
-      item_level,
-      raiderio_score,
-      status,
-      is_officer
+      title,
+      description,
+      event_type,
+      event_date,
+      event_time,
+      max_attendees,
+      status
     } = body
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Member ID is required' },
+        { error: 'Event ID is required' },
         { status: 400 }
       )
     }
 
     const { data, error } = await supabase
-      .from('members')
+      .from('events')
       .update({
-        name,
-        class: memberClass,
-        specialization,
-        role,
-        item_level: item_level || null,
-        raiderio_score: raiderio_score || null,
-        status: status || 'active',
-        is_officer: is_officer || false,
+        title,
+        description: description || null,
+        event_type,
+        event_date,
+        event_time,
+        max_attendees: max_attendees || null,
+        status: status || 'scheduled',
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -131,13 +137,22 @@ export async function PUT(request: NextRequest) {
     if (error) {
       console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: 'Failed to update member' },
+        { error: 'Failed to update event' },
         { status: 500 }
       )
     }
 
+    // Log activity
+    await supabase
+      .from('activity_log')
+      .insert({
+        action: 'event_updated',
+        description: `Event updated: ${title}`,
+        user: 'admin'
+      })
+
     return NextResponse.json(
-      { message: 'Member updated successfully', data },
+      { message: 'Event updated successfully', data },
       { status: 200 }
     )
 
@@ -157,26 +172,42 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Member ID is required' },
+        { error: 'Event ID is required' },
         { status: 400 }
       )
     }
 
+    // Get event title for logging
+    const { data: eventData } = await supabase
+      .from('events')
+      .select('title')
+      .eq('id', id)
+      .single()
+
     const { error } = await supabase
-      .from('members')
+      .from('events')
       .delete()
       .eq('id', id)
 
     if (error) {
       console.error('Supabase error:', error)
       return NextResponse.json(
-        { error: 'Failed to delete member' },
+        { error: 'Failed to delete event' },
         { status: 500 }
       )
     }
 
+    // Log activity
+    await supabase
+      .from('activity_log')
+      .insert({
+        action: 'event_deleted',
+        description: `Event deleted: ${eventData?.title || 'Unknown'}`,
+        user: 'admin'
+      })
+
     return NextResponse.json(
-      { message: 'Member deleted successfully' },
+      { message: 'Event deleted successfully' },
       { status: 200 }
     )
 

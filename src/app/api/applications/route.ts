@@ -105,3 +105,105 @@ export async function GET() {
     )
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, status, notes } = body
+
+    if (!id || !status) {
+      return NextResponse.json(
+        { error: 'Application ID and status are required' },
+        { status: 400 }
+      )
+    }
+
+    const { data, error } = await supabase
+      .from('applications')
+      .update({
+        status,
+        notes: notes || null,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: 'admin' // In a real app, get from JWT token
+      })
+      .eq('id', id)
+      .select()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { error: 'Failed to update application' },
+        { status: 500 }
+      )
+    }
+
+    // Log activity
+    await supabase
+      .from('activity_log')
+      .insert({
+        action: 'application_reviewed',
+        description: `Application status changed to: ${status}`,
+        user: 'admin'
+      })
+
+    return NextResponse.json(
+      { message: 'Application updated successfully', data },
+      { status: 200 }
+    )
+
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id } = body
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Application ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const { error } = await supabase
+      .from('applications')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { error: 'Failed to delete application' },
+        { status: 500 }
+      )
+    }
+
+    // Log activity
+    await supabase
+      .from('activity_log')
+      .insert({
+        action: 'application_deleted',
+        description: 'Application deleted',
+        user: 'admin'
+      })
+
+    return NextResponse.json(
+      { message: 'Application deleted successfully' },
+      { status: 200 }
+    )
+
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
