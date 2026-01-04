@@ -107,6 +107,91 @@ CREATE TABLE activity_log (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Battle.net users table
+CREATE TABLE battle_net_users (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    battlenet_id BIGINT UNIQUE NOT NULL,
+    battletag TEXT NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    token_expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    region TEXT DEFAULT 'eu',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_login TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User characters table
+CREATE TABLE user_characters (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES battle_net_users(id) ON DELETE CASCADE,
+    character_id BIGINT NOT NULL,
+    name TEXT NOT NULL,
+    realm TEXT NOT NULL,
+    realm_slug TEXT NOT NULL,
+    faction TEXT NOT NULL,
+    race TEXT NOT NULL,
+    character_class TEXT NOT NULL,
+    active_spec TEXT,
+    gender TEXT,
+    level INTEGER NOT NULL,
+    average_item_level INTEGER,
+    equipped_item_level INTEGER,
+    achievement_points INTEGER,
+    thumbnail_url TEXT,
+    avatar_url TEXT,
+    is_main BOOLEAN DEFAULT FALSE,
+    last_login_timestamp BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, character_id)
+);
+
+-- Weekly character activities table
+CREATE TABLE weekly_activities (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    character_id UUID REFERENCES user_characters(id) ON DELETE CASCADE,
+    week_start DATE NOT NULL,
+    week_end DATE NOT NULL,
+    
+    -- Mythic+ data
+    mythic_plus_runs INTEGER DEFAULT 0,
+    highest_key_level INTEGER DEFAULT 0,
+    total_keys_completed INTEGER DEFAULT 0,
+    
+    -- Raid data
+    raid_bosses_killed INTEGER DEFAULT 0,
+    raid_difficulty TEXT,
+    
+    -- Great Vault data
+    vault_mythic_plus_tier INTEGER DEFAULT 0,
+    vault_raid_tier INTEGER DEFAULT 0,
+    vault_pvp_tier INTEGER DEFAULT 0,
+    
+    -- Raw API data for reference
+    raw_data JSONB,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(character_id, week_start)
+);
+
+-- Character equipment table
+CREATE TABLE character_equipment (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    character_id UUID REFERENCES user_characters(id) ON DELETE CASCADE,
+    slot TEXT NOT NULL,
+    item_id BIGINT NOT NULL,
+    item_name TEXT NOT NULL,
+    item_level INTEGER NOT NULL,
+    quality TEXT,
+    icon_url TEXT,
+    enchantments JSONB,
+    gems JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Insert default admin user (password: admin123)
 -- Note: This will be properly hashed on first login
 INSERT INTO admin_users (username, password) VALUES 
@@ -173,6 +258,10 @@ ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
 ALTER TABLE guild_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE battle_net_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_characters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE weekly_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE character_equipment ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for public read access
 CREATE POLICY "Public read access for members" ON members FOR SELECT USING (true);
@@ -205,3 +294,24 @@ CREATE POLICY "Admin delete access for gallery" ON gallery FOR DELETE USING (aut
 
 CREATE POLICY "Admin update access for bosses" ON bosses FOR UPDATE USING (auth.role() = 'authenticated');
 CREATE POLICY "Admin update access for guild_settings" ON guild_settings FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Policies for Battle.net users (users can read/update their own data)
+CREATE POLICY "Users can view their own profile" ON battle_net_users FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own profile" ON battle_net_users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own profile" ON battle_net_users FOR UPDATE USING (true);
+
+-- Policies for user characters (public read, users can modify their own)
+CREATE POLICY "Public read access for characters" ON user_characters FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own characters" ON user_characters FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own characters" ON user_characters FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own characters" ON user_characters FOR DELETE USING (true);
+
+-- Policies for weekly activities (public read, system can write)
+CREATE POLICY "Public read access for weekly activities" ON weekly_activities FOR SELECT USING (true);
+CREATE POLICY "System can insert weekly activities" ON weekly_activities FOR INSERT WITH CHECK (true);
+CREATE POLICY "System can update weekly activities" ON weekly_activities FOR UPDATE USING (true);
+
+-- Policies for character equipment (public read, system can write)
+CREATE POLICY "Public read access for equipment" ON character_equipment FOR SELECT USING (true);
+CREATE POLICY "System can insert equipment" ON character_equipment FOR INSERT WITH CHECK (true);
+CREATE POLICY "System can update equipment" ON character_equipment FOR UPDATE USING (true);

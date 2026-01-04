@@ -283,6 +283,212 @@ export interface Database {
           created_at?: string
         }
       }
+      battle_net_users: {
+        Row: {
+          id: string
+          battlenet_id: number
+          battletag: string
+          access_token: string
+          refresh_token: string
+          token_expires_at: string
+          region: string
+          created_at: string
+          last_login: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          battlenet_id: number
+          battletag: string
+          access_token: string
+          refresh_token: string
+          token_expires_at: string
+          region?: string
+          created_at?: string
+          last_login?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          battlenet_id?: number
+          battletag?: string
+          access_token?: string
+          refresh_token?: string
+          token_expires_at?: string
+          region?: string
+          created_at?: string
+          last_login?: string
+          updated_at?: string
+        }
+      }
+      user_characters: {
+        Row: {
+          id: string
+          user_id: string
+          character_id: number
+          name: string
+          realm: string
+          realm_slug: string
+          faction: string
+          race: string
+          character_class: string
+          active_spec: string | null
+          gender: string | null
+          level: number
+          average_item_level: number | null
+          equipped_item_level: number | null
+          achievement_points: number | null
+          thumbnail_url: string | null
+          avatar_url: string | null
+          is_main: boolean
+          last_login_timestamp: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          character_id: number
+          name: string
+          realm: string
+          realm_slug: string
+          faction: string
+          race: string
+          character_class: string
+          active_spec?: string | null
+          gender?: string | null
+          level: number
+          average_item_level?: number | null
+          equipped_item_level?: number | null
+          achievement_points?: number | null
+          thumbnail_url?: string | null
+          avatar_url?: string | null
+          is_main?: boolean
+          last_login_timestamp?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          character_id?: number
+          name?: string
+          realm?: string
+          realm_slug?: string
+          faction?: string
+          race?: string
+          character_class?: string
+          active_spec?: string | null
+          gender?: string | null
+          level?: number
+          average_item_level?: number | null
+          equipped_item_level?: number | null
+          achievement_points?: number | null
+          thumbnail_url?: string | null
+          avatar_url?: string | null
+          is_main?: boolean
+          last_login_timestamp?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      weekly_activities: {
+        Row: {
+          id: string
+          character_id: string
+          week_start: string
+          week_end: string
+          mythic_plus_runs: number
+          highest_key_level: number
+          total_keys_completed: number
+          raid_bosses_killed: number
+          raid_difficulty: string | null
+          vault_mythic_plus_tier: number
+          vault_raid_tier: number
+          vault_pvp_tier: number
+          raw_data: any | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          character_id: string
+          week_start: string
+          week_end: string
+          mythic_plus_runs?: number
+          highest_key_level?: number
+          total_keys_completed?: number
+          raid_bosses_killed?: number
+          raid_difficulty?: string | null
+          vault_mythic_plus_tier?: number
+          vault_raid_tier?: number
+          vault_pvp_tier?: number
+          raw_data?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          character_id?: string
+          week_start?: string
+          week_end?: string
+          mythic_plus_runs?: number
+          highest_key_level?: number
+          total_keys_completed?: number
+          raid_bosses_killed?: number
+          raid_difficulty?: string | null
+          vault_mythic_plus_tier?: number
+          vault_raid_tier?: number
+          vault_pvp_tier?: number
+          raw_data?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      character_equipment: {
+        Row: {
+          id: string
+          character_id: string
+          slot: string
+          item_id: number
+          item_name: string
+          item_level: number
+          quality: string | null
+          icon_url: string | null
+          enchantments: any | null
+          gems: any | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          character_id: string
+          slot: string
+          item_id: number
+          item_name: string
+          item_level: number
+          quality?: string | null
+          icon_url?: string | null
+          enchantments?: any | null
+          gems?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          character_id?: string
+          slot?: string
+          item_id?: number
+          item_name?: string
+          item_level?: number
+          quality?: string | null
+          icon_url?: string | null
+          enchantments?: any | null
+          gems?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

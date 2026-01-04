@@ -90,6 +90,12 @@ export default function Navbar() {
                 {item.label}
               </button>
             ))}
+            <Link 
+              href="/member/login"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Member Login
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -119,6 +125,13 @@ export default function Navbar() {
                 {item.label}
               </button>
             ))}
+            <Link
+              href="/member/login"
+              className="block w-full text-center px-4 py-2 mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              Member Login
+            </Link>
           </div>
         )}
       </div>
