@@ -400,6 +400,93 @@ export class BattleNetAPI {
 
     return response.json()
   }
+
+  /**
+   * Get character PvP bracket statistics
+   */
+  async getCharacterPvPBracket(
+    accessToken: string,
+    realmSlug: string,
+    characterName: string,
+    bracket: '2v2' | '3v3' | 'rbg'
+  ): Promise<any> {
+    const baseUrl = API_URLS[this.region]
+    const encodedName = characterName.toLowerCase()
+    const bracketMap = {
+      '2v2': 'pvp-bracket-2v2',
+      '3v3': 'pvp-bracket-3v3',
+      'rbg': 'pvp-bracket-rbg'
+    }
+    
+    const response = await fetch(
+      `${baseUrl}/profile/wow/character/${realmSlug}/${encodedName}/pvp-bracket/${bracketMap[bracket]}?namespace=profile-${this.region}&locale=de_DE`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    )
+
+    if (!response.ok) {
+      return null
+    }
+
+    return response.json()
+  }
+
+  /**
+   * Get character PvP summary (all brackets)
+   */
+  async getCharacterPvPSummary(
+    accessToken: string,
+    realmSlug: string,
+    characterName: string
+  ): Promise<any> {
+    const baseUrl = API_URLS[this.region]
+    const encodedName = characterName.toLowerCase()
+    
+    const response = await fetch(
+      `${baseUrl}/profile/wow/character/${realmSlug}/${encodedName}/pvp-summary?namespace=profile-${this.region}&locale=de_DE`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    )
+
+    if (!response.ok) {
+      return null
+    }
+
+    return response.json()
+  }
+
+  /**
+   * Get character quests (completed)
+   */
+  async getCharacterQuests(
+    accessToken: string,
+    realmSlug: string,
+    characterName: string
+  ): Promise<any> {
+    const baseUrl = API_URLS[this.region]
+    const encodedName = characterName.toLowerCase()
+    
+    const response = await fetch(
+      `${baseUrl}/profile/wow/character/${realmSlug}/${encodedName}/quests/completed?namespace=profile-${this.region}&locale=de_DE`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    )
+
+    if (!response.ok) {
+      return null
+    }
+
+    return response.json()
+  }
 }
 
 export const battleNetAPI = new BattleNetAPI()

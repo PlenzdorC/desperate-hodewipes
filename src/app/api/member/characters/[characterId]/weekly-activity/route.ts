@@ -68,6 +68,10 @@ export async function GET(
         { status: 500 }
       )
     }
+
+    console.log('Weekly activity:', activity)
+    console.log('Week start:', weekStart.toISOString().split('T')[0])
+    console.log('Week end:', weekEnd.toISOString().split('T')[0])
     
     return NextResponse.json({ 
       activity: activity || {
@@ -170,19 +174,40 @@ export async function POST(
     
     const { weekStart, weekEnd } = getCurrentWeekDates()
     
-    // Fetch Mythic+ data
-    const mythicData = await battleNetAPI.getCharacterMythicKeystoneProfile(
-      accessToken,
-      character.realm_slug,
-      character.name
-    )
+    // Fetch all data in parallel for better performance
+    const [mythicData, raidData, pvpSummary] = await Promise.all([
+      battleNetAPI.getCharacterMythicKeystoneProfile(
+        accessToken,
+        character.realm_slug,
+        character.name
+      ),
+      battleNetAPI.getCharacterRaidProgress(
+        accessToken,
+        character.realm_slug,
+        character.name
+      ),
+      battleNetAPI.getCharacterPvPSummary(
+        accessToken,
+        character.realm_slug,
+        character.name
+      )
+    ])
     
-    // Fetch raid data
-    const raidData = await battleNetAPI.getCharacterRaidProgress(
-      accessToken,
-      character.realm_slug,
-      character.name
-    )
+    // Debug logging
+    console.log(`[Weekly Activity] Character: ${character.name}`)
+    console.log(`[Weekly Activity] M+ Data:`, mythicData?.current_period ? 'Found' : 'Not found')
+    if (mythicData?.current_period?.best_runs) {
+      console.log(`[Weekly Activity] M+ Runs: ${mythicData.current_period.best_runs.length}`)
+    }
+    console.log(`[Weekly Activity] Raid Data:`, raidData?.expansions ? 'Found' : 'Not found')
+    if (raidData?.expansions) {
+      console.log(`[Weekly Activity] Raid Expansions: ${raidData.expansions.length}`)
+      const latest = raidData.expansions[raidData.expansions.length - 1]
+      if (latest?.instances) {
+        console.log(`[Weekly Activity] Latest Instance:`, latest.instances[latest.instances.length - 1]?.instance?.name)
+      }
+    }
+    console.log(`[Weekly Activity] PvP Data:`, pvpSummary ? 'Found' : 'Not found')
     
     // Process mythic+ data
     let mythicPlusRuns = 0
@@ -191,33 +216,95 @@ export async function POST(
     
     if (mythicData?.current_period?.best_runs) {
       mythicPlusRuns = mythicData.current_period.best_runs.length
-      highestKeyLevel = Math.max(...mythicData.current_period.best_runs.map((r: any) => r.keystone_level))
+      highestKeyLevel = Math.max(...mythicData.current_period.best_runs.map((r: any) => r.keystone_level), 0)
       totalKeysCompleted = mythicPlusRuns
     }
     
-    // Process raid data (get current tier kills this week)
+    // Process raid data (get current tier kills)
     let raidBossesKilled = 0
-    let raidDifficulty = null
+    let raidDifficulty: string | null = null
     
-    if (raidData?.expansions) {
-      // Get the latest expansion and tier
+    if (raidData?.expansions && raidData.expansions.length > 0) {
+      // Get the latest expansion
       const latestExpansion = raidData.expansions[raidData.expansions.length - 1]
-      if (latestExpansion?.instances) {
+      
+      if (latestExpansion?.instances && latestExpansion.instances.length > 0) {
+        // Get the latest raid instance (current tier)
         const latestInstance = latestExpansion.instances[latestExpansion.instances.length - 1]
         
-        // Count kills from all difficulties
-        for (const mode of latestInstance.modes || []) {
-          if (mode.progress?.completed_count) {
-            raidBossesKilled = Math.max(raidBossesKilled, mode.progress.completed_count)
-            raidDifficulty = mode.difficulty.type
+        console.log(`[Weekly Activity] Processing raid: ${latestInstance.instance?.name || 'Unknown'}`)
+        
+        // Check all difficulties and get the highest count
+        if (latestInstance.modes && Array.isArray(latestInstance.modes)) {
+          console.log(`[Weekly Activity] Found ${latestInstance.modes.length} difficulty modes`)
+          
+          for (const mode of latestInstance.modes) {
+            const count = mode.progress?.completed_count || 0
+            const diffName = mode.difficulty?.name || mode.difficulty?.type || 'Unknown'
+            
+            console.log(`[Weekly Activity] ${diffName}: ${count} bosses killed`)
+            
+            if (count > 0 && count > raidBossesKilled) {
+              raidBossesKilled = count
+              raidDifficulty = diffName
+            }
           }
+        } else {
+          console.log(`[Weekly Activity] No modes found for latest instance`)
         }
+      } else {
+        console.log(`[Weekly Activity] No instances found in latest expansion`)
       }
+    } else {
+      console.log(`[Weekly Activity] No expansion data found`)
     }
     
-    // Calculate Great Vault tiers (simplified)
-    const vaultMythicPlusTier = Math.min(Math.floor(mythicPlusRuns / 4), 3)
-    const vaultRaidTier = Math.min(Math.floor(raidBossesKilled / 3), 3)
+    // Calculate Great Vault tiers (WoW actual system)
+    // M+: 1 run = tier 1, 4 runs = tier 2, 8 runs = tier 3
+    let vaultMythicPlusTier = 0
+    if (mythicPlusRuns >= 8) {
+      vaultMythicPlusTier = 3
+    } else if (mythicPlusRuns >= 4) {
+      vaultMythicPlusTier = 2
+    } else if (mythicPlusRuns >= 1) {
+      vaultMythicPlusTier = 1
+    }
+    
+    // Raid: 3 bosses = tier 1, 6 bosses = tier 2, 9 bosses = tier 3
+    let vaultRaidTier = 0
+    if (raidBossesKilled >= 9) {
+      vaultRaidTier = 3
+    } else if (raidBossesKilled >= 6) {
+      vaultRaidTier = 2
+    } else if (raidBossesKilled >= 3) {
+      vaultRaidTier = 1
+    }
+    
+    // PvP: Calculate vault tier based on rated wins (approximation)
+    // Note: API doesn't provide "this week" data, so we use season stats as estimate
+    let vaultPvpTier = 0
+    let totalPvpWins = 0
+    
+    if (pvpSummary?.honor_level) {
+      // Check for rated PvP activity in any bracket
+      const brackets = ['2v2', '3v3', 'rbg']
+      for (const bracket of brackets) {
+        const bracketData = pvpSummary[`pvp_bracket_${bracket}`]
+        if (bracketData?.season_match_statistics?.won) {
+          totalPvpWins += bracketData.season_match_statistics.won
+        }
+      }
+      
+      // Estimate weekly wins (this is a rough approximation)
+      // For actual weekly data, you'd need to store previous week's data and compare
+      // For now, we'll just check if there's any recent activity
+      if (totalPvpWins > 0) {
+        // Simplified: If they have PvP wins, assume some weekly activity
+        // Real vault: 3 wins = tier 1, 6 wins = tier 2, 9 wins = tier 3
+        // We can't accurately calculate this without historical data
+        vaultPvpTier = 0 // Set to 0 until we have weekly tracking
+      }
+    }
     
     // Upsert weekly activity
     const { data: activity, error: activityError } = await supabase
@@ -233,10 +320,11 @@ export async function POST(
         raid_difficulty: raidDifficulty,
         vault_mythic_plus_tier: vaultMythicPlusTier,
         vault_raid_tier: vaultRaidTier,
-        vault_pvp_tier: 0, // PvP data would require additional API calls
+        vault_pvp_tier: vaultPvpTier,
         raw_data: {
           mythic: mythicData,
-          raid: raidData
+          raid: raidData,
+          pvp: pvpSummary
         },
         updated_at: new Date().toISOString()
       }, {
